@@ -1,0 +1,54 @@
+<template>
+    <article class="slds-card slds-m-around_medium">
+        <header class="slds-p-around_medium slds-theme_shade">
+            <article class="slds-grid slds-grid_vertical-align-center slds-m-bottom_small">
+                <lightning-icon class="slds-col slds-m-right_small slds-grow-none" icon-name={objectIcon} size="medium"
+                    alternative-text="Opportunity crowd icon">
+                </lightning-icon>
+                <div class="record-list-header-titles slds-col">
+                    <h2 class="slds-text-heading_medium">
+                        {objectApiName}s
+                    </h2>
+                    <h3 class="slds-text-body_small">
+                        All {objectApiName}s
+                    </h3>
+                </div>
+            </article>
+            <div class="slds-grid slds-grid_vertical-align-center justify-between">
+                <article class="slds-grid slds-grid_vertical-align-center">
+                    <lightning-input placeholder="Record Name" data-id="search-input" type="search"
+                        variant="label-hidden"></lightning-input>
+                    <lightning-button class="slds-m-around_small" label="Search"
+                        onclick={getObjectData}></lightning-button>
+                    <lightning-button label="Clear search" onclick={clearSearch}></lightning-button>
+                    <lightning-button class="slds-m-around_small" label="Delete selected records" variant="destructive" onclick={deleteSelectedRecords}></lightning-button>
+                </article>
+                <article
+                    class="buttons-wrapper slds-grid slds-grid_horizontal-align-center slds-m-around_medium slds-align_absolute-center">
+                    <lightning-button label="Previous page" onclick={getRecordsInThePreviousPage}
+                        class="slds-m-right_small"></lightning-button>
+                    <lightning-button label="Next page" onclick={getRecordsInTheNextPage}></lightning-button>
+                </article>
+            </div>
+        </header>
+        <main class="datatable-wrapper slds-border_top">
+            <lightning-spinner if:true={dataIsLoading} size="medium"></lightning-spinner>
+            <lightning-datatable if:false={isObjectDataEmpty} data-id="datatable" data={data} columns={columns}
+                key-field="id" onrowaction={handleRecordMenuActions} onrowselection={updateSelectedRecordsList}></lightning-datatable>
+            <div class="height-100 slds-grid slds-grid_vertical-align-center slds-align_absolute-center"
+                if:false={dataIsLoading}>
+                <article if:true={isObjectDataEmpty}>
+                    <lightning-icon class="slds-align_absolute-center" icon-name="utility:search" size="large"
+                    alternative-text="Search icon">
+                </lightning-icon>
+                    <p class="slds-text-heading_small bold slds-text-align_center slds-m-bottom_medium slds-m-top_small">No records found</p>
+                    <p class="slds-text-align_center">
+                        We couldn't find what you searched for.
+                        <br />
+                        Try searching again.
+                    </p>
+                </article>
+            </div>
+        </main>
+    </article>
+</template>
