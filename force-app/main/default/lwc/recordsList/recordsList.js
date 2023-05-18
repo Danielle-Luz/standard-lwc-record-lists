@@ -1,6 +1,7 @@
 
 import { LightningElement, api, track, wire } from 'lwc';
 import { getObjectInfo } from 'lightning/uiObjectInfoApi';
+import DeleteRecordsModal from 'c/deleteRecordsModal';
 import getContactList from '@salesforce/apex/ContactController.getContactList';
 import getAccountList from '@salesforce/apex/AccountController.getAccountList';
 import getCaseList from '@salesforce/apex/CaseController.getCaseList';
@@ -11,16 +12,36 @@ import deleteCaseRecords from '@salesforce/apex/CaseController.deleteCaseRecords
 // object containing apex methods related to the object's api name
 const objectMethods = {
     Account: {
-        deleteRecordsMethod: deleteAccountRecords,
-        getRecordsMethod: getAccountList
+        deleteRecords: {
+            method: deleteAccountRecords,
+            modalMetadata: {
+                label: "Delete account's records",
+                title: "Do you want to delete these accounts? ",
+                description: "The account's reference in 'Closed Won' opportunities will become null"
+            }
+        },
+        getRecords: getAccountList
     },
     Contact: {
-        deleteRecordsMethod: deleteContactRecords,
-        getRecordsMethod: getContactList
+        deleteRecords: {
+            method: deleteContactRecords,
+            modalMetadata: {
+                label: "Delete contact's records",
+                title: "Do you want to delete these contacts? ",
+                description: "The contact's reference in related cases will become null"
+            }
+        },
+        getRecords: getContactList
     },
     Case: {
-        deleteRecordsMethod: deleteCaseRecords,
-        getRecordsMethod: getCaseList
+        deleteRecords: {
+            method: deleteCaseRecords,
+            modalMetadata: {
+                label: "Delete case's records",
+                title: "Do you want to delete these cases? ",
+            }
+        },
+        getRecords: getCaseList
     },
 }
 
@@ -59,7 +80,7 @@ export default class RecordsList extends LightningElement {
         const searchInput = this.template.querySelector("[data-id='search-input']");
         const searchedRecordName = searchInput?.value || "";
 
-        const getObjectRecordsMethod = objectMethods[this.objectApiName].getRecordsMethod;
+        const getObjectRecordsMethod = objectMethods[this.objectApiName].getRecords;
 
         this.dataIsLoading = true;
 
@@ -156,14 +177,16 @@ export default class RecordsList extends LightningElement {
     }
 
     deleteSelectedRecords(event) {
-        const deleteRecordsMethod = objectMethods[this.objectApiName].deleteRecordsMethod;
+        this.openDeleteModal();
+        
+        const deleteRecords = objectMethods[this.objectApiName].deleteRecords.method;
 
         const selectedRecordsIds = this.selectedRecords.map(record => {
             return record.Id
         });
 
         if (selectedRecordsIds.length > 0) {
-            deleteRecordsMethod({ recordsId: selectedRecordsIds })
+            deleteRecords({ recordsId: selectedRecordsIds })
                 .then(() => {
                     // apagou
                     this.getObjectData();
@@ -173,6 +196,15 @@ export default class RecordsList extends LightningElement {
                     // toast de erro
                 })
         }
+    }
+
+    openDeleteModal() {
+        const deleteModalMetadata = objectMethods[this.objectApiName].deleteRecords.modalMetadata;
+
+        DeleteRecordsModal.open(deleteModalMetadata)
+        .then(() => {
+
+        });
     }
 
     connectedCallback() {
