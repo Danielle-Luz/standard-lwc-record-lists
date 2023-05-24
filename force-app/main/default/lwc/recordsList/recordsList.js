@@ -60,6 +60,9 @@ export default class RecordsList extends LightningElement {
 
     allRecords;
 
+    @track
+    filteredRecords;
+
     recordsPageNumber;
 
     selectedRecords;
@@ -76,21 +79,28 @@ export default class RecordsList extends LightningElement {
         return objectIsEmpty;
     }
 
-    getObjectData() {
-        const searchInput = this.template.querySelector("[data-id='search-input']");
-        const searchedRecordName = searchInput?.value || "";
+    get isTheMaxPage() {
+        const maxPageNumber = (this.filteredRecords.length / this.numberOfRowsDisplayed) - 1;
 
+        return this.recordsPageNumber >= maxPageNumber;
+    }
+
+    get isTheMinPage() {
+        const minPageNumber = 0;
+
+        return this.recordsPageNumber == minPageNumber;
+    }
+
+    getObjectData() {
         const getObjectRecordsMethod = objectMethods[this.objectApiName].getRecords;
 
         this.dataIsLoading = true;
 
-        getObjectRecordsMethod({ searchedName: searchedRecordName })
+        getObjectRecordsMethod({ searchedName: "" })
             .then(objectRecords => {
                 this.allRecords = objectRecords;
-
-                this.recordsPageNumber = 0;
-
-                this.showRecordsInSpecificPage();
+                
+                this.showRecordsInSpecificPage(objectRecords);
             })
             .catch(error => {
                 console.log(error);
@@ -100,27 +110,23 @@ export default class RecordsList extends LightningElement {
             });
     }
 
-    clearSearch() {
-        const searchInput = this.template.querySelector("[data-id='search-input']");
+    showRecordsInSpecificPage(filteredRecords) {
+        if(filteredRecords != undefined) {
+            this.recordsPageNumber = 0;
 
-        searchInput.value = "";
+            this.filteredRecords = filteredRecords;
+        }
 
-        this.getObjectData();
-    }
-
-    showRecordsInSpecificPage() {
         const firstRecordInPageIndex = this.recordsPageNumber * this.numberOfRowsDisplayed;
         const lastRecordInPageIndex = firstRecordInPageIndex + this.numberOfRowsDisplayed;
 
-        const setOfRecordsToBeShown = this.allRecords.slice(firstRecordInPageIndex, lastRecordInPageIndex);
+        const setOfRecordsToBeShown = this.filteredRecords.slice(firstRecordInPageIndex, lastRecordInPageIndex);
 
         this.data = setOfRecordsToBeShown;
     }
 
     getRecordsInTheNextPage() {
-        const maxPageNumber = (this.allRecords.length / this.numberOfRowsDisplayed) - 1;
-
-        if (this.recordsPageNumber < maxPageNumber) {
+        if (!this.isTheMaxPage) {
             this.recordsPageNumber += 1;
 
             this.showRecordsInSpecificPage();
@@ -128,13 +134,42 @@ export default class RecordsList extends LightningElement {
     }
 
     getRecordsInThePreviousPage() {
-        const minPageNumber = 0;
-
-        if (this.recordsPageNumber > minPageNumber) {
+        if (!this.isTheMinPage) {
             this.recordsPageNumber -= 1;
 
             this.showRecordsInSpecificPage();
         }
+    }
+
+    searchRecords() {
+        const searchInput = this.template.querySelector("[data-id='search-input']");
+        const searchedValue = searchInput.value.toLowerCase();
+
+        const foundRecords = this.allRecords.filter(recordData => {
+            const allRecordFieldValues = JSON.parse(JSON.stringify(Object.values(recordData)));
+            
+            const someFieldHasTheSearchedValue = allRecordFieldValues.some(fieldValue => {
+                const fieldIsNestedObject = typeof fieldValue === 'object';
+
+                if(fieldIsNestedObject) {
+                    const nestedObjectFieldValues = Object.values(fieldValue);
+
+                    allRecordFieldValues.push([...nestedObjectFieldValues]);
+                    
+                    return false;
+                }
+
+                return new String(fieldValue).toLowerCase().includes(searchedValue);
+            });
+            
+            return someFieldHasTheSearchedValue;
+        });
+
+        this.showRecordsInSpecificPage(foundRecords);
+    }
+
+    clearSearch() {
+        this.showRecordsInSpecificPage(this.allRecords);
     }
 
     addManageRecordMenu() {
