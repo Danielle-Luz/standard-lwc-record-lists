@@ -6,6 +6,10 @@
     height: 100%;
 }
 
+.buttons-wrapper {
+    gap: 10px;
+}
+
 .datatable-wrapper {
     height: 350px;
 }

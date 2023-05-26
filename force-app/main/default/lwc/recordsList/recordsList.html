@@ -14,27 +14,26 @@
                     </h3>
                 </div>
             </article>
-            <div class="slds-grid slds-grid_vertical-align-center justify-between">
-                <article class="slds-grid slds-grid_vertical-align-center">
-                    <lightning-input placeholder="Record Name" data-id="search-input" type="search"
-                        variant="label-hidden"></lightning-input>
-                    <lightning-button class="slds-m-around_small" label="Search"
-                        onclick={searchRecords}></lightning-button>
-                    <lightning-button label="Clear search" onclick={clearSearch}></lightning-button>
-                    <lightning-button class="slds-m-around_small" label="Delete selected records" variant="destructive" onclick={deleteSelectedRecords}></lightning-button>
+            <div>
+                <article class="slds-grid slds-wrap slds-grid_vertical-align-center buttons-wrapper">
+                    <lightning-input placeholder="Search in all fields..." data-id="search-input" type="search" variant="label-hidden"></lightning-input>
+                    <lightning-button-group>
+                        <lightning-button label="Search"
+                            onclick={searchRecords}></lightning-button>
+                        <lightning-button label="Clear search results" onclick={clearSearch}></lightning-button>
+                    </lightning-button-group>
+                    <lightning-button if:true={selectedRecords} disabled={toggleDeleteButton} label="Delete selected records" variant="destructive" onclick={deleteSelectedRecords}></lightning-button>
                 </article>
                 <article if:true={filteredRecords}
-                    class="buttons-wrapper slds-grid slds-grid_horizontal-align-center slds-m-around_medium slds-align_absolute-center">
-                    <lightning-button data-id="next-page-button" label="Previous page" onclick={getRecordsInThePreviousPage}
-                        class="slds-m-right_small" disabled={isTheMinPage}></lightning-button>
-                    <lightning-button  data-id="next-page-button" label="Next page" onclick={getRecordsInTheNextPage} disabled={isTheMaxPage}></lightning-button>
+                    class="slds-grid slds-grid_horizontal-align-center slds-m-top_large justify-between">
+                    <lightning-button data-id="next-page-button" label="Previous page" onclick={getRecordsInThePreviousPage} disabled={isTheMinPage}></lightning-button>
+                    <lightning-button data-id="next-page-button" label="Next page" onclick={getRecordsInTheNextPage} disabled={isTheMaxPage}></lightning-button>
                 </article>
             </div>
         </header>
         <main class="datatable-wrapper slds-border_top">
             <lightning-spinner if:true={dataIsLoading} size="medium"></lightning-spinner>
-            <lightning-datatable if:false={isObjectDataEmpty} data-id="datatable" data={data} columns={columns}
-                key-field="id" onrowaction={handleRecordMenuActions} onrowselection={updateSelectedRecordsList}></lightning-datatable>
+            <lightning-datatable if:false={isObjectDataEmpty} data-id="datatable" data={data} columns={columns} key-field="id" onrowaction={handleRecordMenuActions} onrowselection={updateSelectedRecordsList}></lightning-datatable>
             <div class="height-100 slds-grid slds-grid_vertical-align-center slds-align_absolute-center"
                 if:false={dataIsLoading}>
                 <article if:true={isObjectDataEmpty}>

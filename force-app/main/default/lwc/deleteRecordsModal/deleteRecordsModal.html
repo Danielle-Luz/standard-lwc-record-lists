@@ -2,10 +2,9 @@
   <lightning-modal-header label={label}></lightning-modal-header>
   <lightning-modal-body>
     <h2 class="slds-text-heading_small slds-text-align_center">{title}</h2>
-    <p class="slds-text-align_center" if:true={description}>{description}</p>
   </lightning-modal-body>
   <lightning-modal-footer>
-    <lightning-button class="slds-m-right_small" label="Cancel"></lightning-button>
-    <lightning-button label="Delete"></lightning-button>
+    <lightning-button data-id="cancel-button" class="slds-m-right_small" label="Cancel" onclick={getUserChoiceAboutRecordsDeletion}></lightning-button>
+    <lightning-button data-id="delete-button" label="Delete" onclick={getUserChoiceAboutRecordsDeletion} variant="destructive"></lightning-button>
   </lightning-modal-footer>
 </template>

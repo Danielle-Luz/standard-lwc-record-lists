@@ -1,3 +1,6 @@
 <template>
-    
+    <lightning-modal-header label="Error while trying to delete some records"></lightning-modal-header>
+    <lightning-modal-body>
+        <lightning-datatable class="disable-hover-active" data={deleteErrorMessagesList} columns={columns} key-field="id" hide-checkbox-column="true"></lightning-datatable>
+    </lightning-modal-body>
 </template>

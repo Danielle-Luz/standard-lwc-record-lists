@@ -9,6 +9,11 @@ export default class DeleteRecordsModal extends LightningModal {
   @api
   title;
 
-  @api
-  description = false;
+  getUserChoiceAboutRecordsDeletion(event) {
+    const clickedButtonId = event.target.getAttribute("data-id");
+
+    const deleteButtonWasCliked = clickedButtonId == "delete-button";
+
+    this.close(deleteButtonWasCliked);
+  }
 }

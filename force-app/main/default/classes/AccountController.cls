@@ -1,10 +1,8 @@
 public without sharing class AccountController {
     @AuraEnabled
-    public static List<Account> getAccountList(String searchedName){
-        String formattedSearchedName = '%' + searchedName + '%';
-
+    public static List<Account> getAccountList(){
         try {
-            List<Account> accountList = [SELECT Id, BillingAddress, CreatedDate, Name, OwnerId, Phone, Type  FROM Account WHERE Name LIKE :formattedSearchedName];
+            List<Account> accountList = [SELECT Id, Description, Name, Rating, Phone, Type  FROM Account];
 
             return accountList;
         } catch (Exception e) {
@@ -13,19 +11,23 @@ public without sharing class AccountController {
     }
 
     @AuraEnabled
-    public static void deleteAccountRecords(List<String> recordsId){
-        try {
-            if(Schema.sObjectType.Account.isDeletable()) {
-                List<Account> recordsToBeDeleted = [SELECT Id FROM Account WHERE Id IN :recordsId];
+    public static String deleteAccountRecords(List<String> recordsId){
+        String deleteOperationErrors = '';
 
-                OpportunityController.removeDeletedAccountsFromWonOpportunities(recordsId);
-                
-                delete recordsToBeDeleted;
+        if(Schema.sObjectType.Account.isDeletable()) {
+            List<Account> recordsToBeDeleted = [SELECT Id FROM Account WHERE Id IN :recordsId];
+
+            Database.DeleteResult[] deleteOperationResults = Database.delete(recordsToBeDeleted, false);
+
+            for(Database.DeleteResult deleteResult : deleteOperationResults) {
+                for(Database.Error deleteError : deleteResult.getErrors()) {
+                    deleteOperationErrors += deleteError.getMessage();
+                }
             }
-        } catch (Exception e) {
-            System.debug(e.getMessage());
-
-            throw new AuraHandledException(e.getMessage());
+        } else {
+            deleteOperationErrors += 'The user can\'t delete account records';
         }
+
+        return deleteOperationErrors;
     }
 }

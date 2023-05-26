@@ -1,10 +1,8 @@
 public without sharing class CaseController {
     @AuraEnabled
-    public static List<Case> getCaseList(String searchedName){
-        String formattedSearchedName = '%' + searchedName + '%';
-
+    public static List<Case> getCaseList(){
         try {
-            List<Case> caseList = [SELECT Id, AccountId, CaseNumber, ContactId, CreatedDate, OwnerId, Priority, Status, Subject, Type  FROM Case WHERE CaseNumber LIKE :formattedSearchedName];
+            List<Case> caseList = [SELECT Id, ContactEmail, IsClosed, CaseNumber, ClosedDate, Priority, Status, Subject, Type  FROM Case];
             
             return caseList;
         } catch (Exception e) {
@@ -13,30 +11,23 @@ public without sharing class CaseController {
     }
     
     @AuraEnabled
-    public static void deleteCaseRecords(List<String> recordsId){
-        try {
-            if(Schema.sObjectType.Case.isDeletable()) {
-                List<Case> recordsToBeDeleted = [SELECT Id FROM Case WHERE Id IN :recordsId];
+    public static String deleteCaseRecords(List<String> recordsId){
+        String deleteOperationErrors = '';
 
-                delete recordsToBeDeleted;
+        if(Schema.sObjectType.Case.isDeletable()) {
+            List<Case> recordsToBeDeleted = [SELECT Id FROM Case WHERE Id IN :recordsId];
+
+            Database.DeleteResult[] deleteOperationResults = Database.delete(recordsToBeDeleted, false);
+
+            for(Database.DeleteResult deleteResult : deleteOperationResults) {
+                for(Database.Error deleteError : deleteResult.getErrors()) {
+                    deleteOperationErrors += deleteError.getMessage();
+                }
             }
-        } catch (Exception e) {
-            System.debug(e.getMessage());
-            throw new AuraHandledException(e.getMessage());
+        } else {
+            deleteOperationErrors += 'The user can\'t delete case records';
         }
-    }
 
-    public static void removeDeletedContactFromCases(List<String> deletedContactsIds) {
-        List<Case> casesRelatedToDeletedContacts = [SELECT Id FROM Case WHERE ContactId IN :deletedContactsIds];
-
-        if(Schema.sObjectType.Case.isUpdateable()) {
-            for(Case relatedCase : casesRelatedToDeletedContacts) {
-                relatedCase.ContactId = null;
-            }
-    
-            update casesRelatedToDeletedContacts;
-        } else if (casesRelatedToDeletedContacts.size() > 0) {
-            throw new AuraHandledException('Couldn\'t update the cases associated with the deleted contacts');
-        }
+        return deleteOperationErrors;
     }
 }

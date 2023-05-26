@@ -1,10 +1,8 @@
 public without sharing class ContactController {
     @AuraEnabled
-    public static List<Contact> getContactList(String searchedName){
-        String formattedSearchedName = '%' + searchedName + '%';
-
+    public static List<Contact> getContactList(){
         try {
-            List<Contact> contactList = [SELECT Id, AccountId, CreatedDate, Email, Name, OwnerId, Phone, Title FROM Contact WHERE Name LIKE :formattedSearchedName];
+            List<Contact> contactList = [SELECT Id, Department, Description, Email, Level__c, Name, Phone, Title FROM Contact];
 
             return contactList;
         } catch (Exception e) {
@@ -13,20 +11,23 @@ public without sharing class ContactController {
     }
     
     @AuraEnabled
-    public static void deleteContactRecords(List<String> recordsId){
-        try {
-            if(Schema.sObjectType.Contact.isDeletable()) {
-                List<Contact> recordsToBeDeleted = [SELECT Id FROM Contact WHERE Id IN :recordsId];
+    public static String deleteContactRecords(List<String> recordsId){
+        String deleteOperationErrors = '';
 
-                CaseController.removeDeletedContactFromCases(recordsId);
+        if(Schema.sObjectType.Contact.isDeletable()) {
+            List<Contact> recordsToBeDeleted = [SELECT Id FROM Contact WHERE Id IN :recordsId];
 
-                delete recordsToBeDeleted;
+            Database.DeleteResult[] deleteOperationResults = Database.delete(recordsToBeDeleted, false);
+
+            for(Database.DeleteResult deleteResult : deleteOperationResults) {
+                for(Database.Error deleteError : deleteResult.getErrors()) {
+                    deleteOperationErrors += deleteError.getMessage();
+                }
             }
-        } catch (Exception e) {
-            System.debug(e.getMessage());
-            throw new AuraHandledException(e.getMessage());
+        } else {
+            deleteOperationErrors += 'The user can\'t delete contact records';
         }
+
+        return deleteOperationErrors;
     }
-
-
 }

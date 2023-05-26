@@ -1,49 +1,15 @@
 
 import { LightningElement, api, track, wire } from 'lwc';
 import { getObjectInfo } from 'lightning/uiObjectInfoApi';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import DeleteRecordsModal from 'c/deleteRecordsModal';
+import ErrorModal from 'c/errorModal';
 import getContactList from '@salesforce/apex/ContactController.getContactList';
 import getAccountList from '@salesforce/apex/AccountController.getAccountList';
 import getCaseList from '@salesforce/apex/CaseController.getCaseList';
 import deleteContactRecords from '@salesforce/apex/ContactController.deleteContactRecords';
 import deleteAccountRecords from '@salesforce/apex/AccountController.deleteAccountRecords';
 import deleteCaseRecords from '@salesforce/apex/CaseController.deleteCaseRecords';
-
-// object containing apex methods related to the object's api name
-const objectMethods = {
-    Account: {
-        deleteRecords: {
-            method: deleteAccountRecords,
-            modalMetadata: {
-                label: "Delete account's records",
-                title: "Do you want to delete these accounts? ",
-                description: "The account's reference in 'Closed Won' opportunities will become null"
-            }
-        },
-        getRecords: getAccountList
-    },
-    Contact: {
-        deleteRecords: {
-            method: deleteContactRecords,
-            modalMetadata: {
-                label: "Delete contact's records",
-                title: "Do you want to delete these contacts? ",
-                description: "The contact's reference in related cases will become null"
-            }
-        },
-        getRecords: getContactList
-    },
-    Case: {
-        deleteRecords: {
-            method: deleteCaseRecords,
-            modalMetadata: {
-                label: "Delete case's records",
-                title: "Do you want to delete these cases? ",
-            }
-        },
-        getRecords: getCaseList
-    },
-}
 
 export default class RecordsList extends LightningElement {
     @api
@@ -66,6 +32,21 @@ export default class RecordsList extends LightningElement {
     recordsPageNumber;
 
     selectedRecords;
+
+    objectMethods = {
+    Account: {
+        deleteRecordsMethod: deleteAccountRecords,
+        getRecordsMethod: getAccountList
+    },
+    Contact: {
+        deleteRecordsMethod: deleteContactRecords,
+        getRecordsMethod: getContactList
+    },
+    Case: {
+        deleteRecordsMethod: deleteCaseRecords,
+        getRecordsMethod: getCaseList
+    },
+}
 
     get objectIcon() {
         const iconName = "standard:" + this.objectApiName.toLowerCase();
@@ -91,23 +72,39 @@ export default class RecordsList extends LightningElement {
         return this.recordsPageNumber == minPageNumber;
     }
 
-    getObjectData() {
-        const getObjectRecordsMethod = objectMethods[this.objectApiName].getRecords;
+    get toggleDeleteButton() {
+        const someRecordWasSelected = this.selectedRecords.length > 0;
+
+        return !someRecordWasSelected;
+    }
+
+    async getObjectData() {
+        const getObjectRecordsMethod = this.objectMethods[this.objectApiName].getRecordsMethod;
 
         this.dataIsLoading = true;
 
-        getObjectRecordsMethod({ searchedName: "" })
-            .then(objectRecords => {
-                this.allRecords = objectRecords;
-                
-                this.showRecordsInSpecificPage(objectRecords);
-            })
-            .catch(error => {
-                console.log(error);
-            })
-            .finally(() => {
-                this.dataIsLoading = false;
+        try {
+            const allObjectRecords = await getObjectRecordsMethod();
+
+            this.allRecords = allObjectRecords;
+            
+            this.showRecordsInSpecificPage(allObjectRecords);
+
+            this.selectedRecords = [];
+        } catch(error) {
+            console.error(error);
+
+            const errorToast = new ShowToastEvent({
+                title: `Could not load records from ${this.objectApiName} object`,
+                variant: "error"
             });
+
+            this.dispatchEvent(errorToast);
+        } finally {
+            this.dataIsLoading = false;
+
+            this.template.querySelector("lightning-datatable").selectedRows = [];
+        }
     }
 
     showRecordsInSpecificPage(filteredRecords) {
@@ -211,35 +208,50 @@ export default class RecordsList extends LightningElement {
         this.selectedRecords = event.detail.selectedRows;
     }
 
-    deleteSelectedRecords(event) {
-        this.openDeleteModal();
+    async deleteSelectedRecords(event) {
+        const userChooseToDeleteRecords = await this.openDeleteModal();
         
-        const deleteRecords = objectMethods[this.objectApiName].deleteRecords.method;
+        if(userChooseToDeleteRecords) {
+            const deleteRecords = this.objectMethods[this.objectApiName].deleteRecordsMethod;
 
-        const selectedRecordsIds = this.selectedRecords.map(record => {
-            return record.Id
-        });
+            const selectedRecordsIds = this.selectedRecords.map(record => {
+                return record.Id
+            });
 
-        if (selectedRecordsIds.length > 0) {
-            deleteRecords({ recordsId: selectedRecordsIds })
-                .then(() => {
-                    // apagou
-                    this.getObjectData();
-                })
-                .catch((error) => {
-                    console.log(error);
-                    // toast de erro
-                })
+            const allErrorMessagesAsString = await deleteRecords({ recordsId: selectedRecordsIds });
+
+            const recordsQuantityBeforeDeletion = this.allRecords.length;
+
+            if(allErrorMessagesAsString != "") {
+                const deleteErrorMessagesList = allErrorMessagesAsString.split(/\n/g).map(errorMessage => {
+                    return { errorMessage };
+                });
+                
+                await ErrorModal.open({ deleteErrorMessagesList });
+            }
+
+            await this.getObjectData();
+
+            if(this.allRecords.length != recordsQuantityBeforeDeletion) {
+                const successToast = new ShowToastEvent({
+                    title: "The records not related to other records were successfully deleted",
+                    variant: "success"
+                });
+    
+                this.dispatchEvent(successToast);
+            }
         }
     }
 
     openDeleteModal() {
-        const deleteModalMetadata = objectMethods[this.objectApiName].deleteRecords.modalMetadata;
+        const deleteModalMetadata = {
+            label: `Delete ${this.objectApiName}'s records`,
+            title: `Do you want to delete these ${this.objectApiName.toLowerCase()}s? `
+        };
 
-        DeleteRecordsModal.open(deleteModalMetadata)
-        .then(() => {
+        const userChooseToDeleteRecords = DeleteRecordsModal.open(deleteModalMetadata);
 
-        });
+        return userChooseToDeleteRecords;
     }
 
     connectedCallback() {
@@ -249,7 +261,9 @@ export default class RecordsList extends LightningElement {
     @wire(getObjectInfo, { objectApiName: "$objectApiName" })
     getObjectColumns({ data, error }) {
         if (data) {
-            const selectedFieldsApiNames = ["Name", "AccountId", "Title", "Phone", "Email", "Type", "OwnerId", "CaseNumber", "ContactId", "Status", "Priority", "CreatedDate", "Subject"];
+            console.log(this.objectApiName);
+            console.log(data);
+            const selectedFieldsApiNames = ["Name", "Department", "Title", "Phone", "Email", "Level", "Description", "Rating", "CaseNumber", "Type", "ContactEmail", "Status", "IsClosed", "ClosedDate", "Priority", "Level", "Subject"];
 
             for (let objectFieldName in data.fields) {
                 const fieldMetadata = data.fields[objectFieldName];
@@ -269,7 +283,14 @@ export default class RecordsList extends LightningElement {
 
             this.addManageRecordMenu();
         } else if (error) {
-            console.log(error);
+            console.error(error);
+
+            const errorToast = new ShowToastEvent({
+                title: `Could not load datatable columns for ${this.objectApiName} object`,
+                variant: "error"
+            });
+
+            this.dispatchEvent(errorToast);
         }
     };
 }
