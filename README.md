@@ -20,7 +20,7 @@ Lightning web component responsável por listar os registros de três standard o
 - Listar todos os registros dos objetos contact, case e account;
 - Exclusão de registros em massa;
 - Paginação de registros;
-- Busca de registros com base em todos os campos de um objeto;
+- Busca de registros com base em todos os campos exibidos de um objeto;
 - Abertura de registro em guia diferente;
 - Operações SOQL e DML com o uso de apex.
 
@@ -35,7 +35,7 @@ Lightning web component responsável por listar os registros de três standard o
 
 <p align="center">
   <a href="https://github.com/Danielle-Luz">
-    <img width="120px" src="https://avatars.githubusercontent.com/u/99164019?v=4" alt="foto de uma mulher parda com o cabelo castanho, sorrindo levemente na frente de um fundo verde com bits">
+    <img width="120px" src="https://avatars.githubusercontent.com/u/99164019?v=4" alt="foto de uma mulher parda com o cabelo castanho, sorrindo na frente de um fundo azul">
   </a>
 </p>
 
